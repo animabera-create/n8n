@@ -1,0 +1,91 @@
+{
+  "name": "chatbot",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "13789a2f-1c5e-46f0-8e9a-6ce812dd02e1",
+      "name": "When chat message received",
+      "webhookId": "eb8a2d57-ea5c-4880-b67b-31a486b2d3b0"
+    },
+    {
+      "parameters": {
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        112,
+        -144
+      ],
+      "id": "fed7d7ee-f781-449a-a530-25b39e3d5f41",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-safeguard-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "58f9a9ef-f4dc-49df-8b2d-5e3d3ccf7bc4",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "XDrrdU3CmfsinPRa",
+          "name": "Groq account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "bf5b6029-4df7-4da0-b4c8-fdc749f7644b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9be8c0cd99bf33fff126f71667aef8f6ecdc156d2d3c25de85bf58f2d0a5ed42"
+  },
+  "nodeGroups": [],
+  "id": "uOZ9zVoB1fGlJXWO",
+  "tags": []
+}

@@ -1,0 +1,204 @@
+{
+  "name": "Blog Writer",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Blog Writer",
+        "formDescription": "Tell me what to write and I will draft the blog post.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Topic",
+              "placeholder": "e.g. Benefits of remote work",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Keywords",
+              "placeholder": "comma separated (optional)"
+            },
+            {
+              "fieldLabel": "Tone",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Professional"
+                  },
+                  {
+                    "option": "Casual"
+                  },
+                  {
+                    "option": "Friendly"
+                  },
+                  {
+                    "option": "Persuasive"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Length",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Short (~500 words)"
+                  },
+                  {
+                    "option": "Medium (~1000 words)"
+                  },
+                  {
+                    "option": "Long (~1500 words)"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1e387319-9bd3-458f-8d15-ba1771e92082",
+      "name": "Blog Request",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        112
+      ],
+      "webhookId": "6c05dd23-501a-4db4-ba5d-e0c563664a16"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a blog post.\n\nTopic: {{ $json.Topic }}\nKeywords: {{ $json.Keywords || 'none' }}\nTone: {{ $json.Tone }}\nLength: {{ $json.Length }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an expert blog writer. Write a complete, engaging, well-structured blog post from the details given.\n\nRules:\n- Output ONLY the blog post in Markdown, with no commentary before or after.\n- Start with a single H1 title (# Title).\n- Follow with a short, hooking introduction.\n- Use clear H2 sections (and H3 where useful), short paragraphs, and bullet points where they help.\n- Work the given keywords in naturally; do not keyword-stuff.\n- Match the requested tone and approximate length.\n- End with a conclusion and a short call to action."
+            }
+          ]
+        }
+      },
+      "id": "cc3f4b8f-825a-4f6f-bc71-ab0a0df3901b",
+      "name": "Write Blog with LLM",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        256,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        352,
+        112
+      ],
+      "id": "e9a99cc0-058f-409c-aae9-3ea75cd90805",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "XDrrdU3CmfsinPRa",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.first().json;\nconst raw = first.text || first.output || '';\nconst blog = String(raw)\n  .replace(/^```(?:markdown|md)?\\s*/i, '')\n  .replace(/```\\s*$/, '')\n  .trim();\n\nif (!blog) {\n  throw new Error('The model returned an empty blog post.');\n}\n\nconst titleMatch = blog.match(/^#\\s+(.+)$/m);\n\nreturn [{\n  json: {\n    title: titleMatch ? titleMatch[1].trim() : 'Your blog post',\n    blog,\n    word_count: blog.split(/\\s+/).filter(Boolean).length\n  }\n}];"
+      },
+      "id": "4b27a759-57ac-45e0-8633-d5b8cd82004d",
+      "name": "Clean Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "={{ $json.title }}",
+        "completionMessage": "={{ $json.blog }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        720,
+        96
+      ],
+      "id": "dab20430-8525-4957-8711-4328dfc0d63e",
+      "name": "Show Blog",
+      "webhookId": "e5c3a9d2-3003-4e30-8000-000000000003"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Blog Request": {
+      "main": [
+        [
+          {
+            "node": "Write Blog with LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Blog with LLM": {
+      "main": [
+        [
+          {
+            "node": "Clean Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Output": {
+      "main": [
+        [
+          {
+            "node": "Show Blog",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Blog with LLM",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "05e27b38-4607-4817-a6c4-d877bf8df1a8",
+  "meta": {
+    "instanceId": "9be8c0cd99bf33fff126f71667aef8f6ecdc156d2d3c25de85bf58f2d0a5ed42"
+  },
+  "nodeGroups": [],
+  "id": "bw956vfQNiBNFmry",
+  "tags": []
+}

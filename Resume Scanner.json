@@ -1,0 +1,213 @@
+{
+  "name": "Resume Scanner",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Resume Scanner",
+        "formDescription": "Upload a resume (PDF) to extract a list of skills.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Resume",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": ".pdf",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "20edc6ab-5a0d-421b-93e6-92cff42e4054",
+      "name": "Upload Resume",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        816,
+        96
+      ],
+      "webhookId": "909131f6-236c-498f-bb79-fdadb8546d52"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst key = Object.keys(item.binary || {})[0];\nif (!key) {\n  throw new Error('No file found. Upload a PDF resume.');\n}\nreturn [{ json: item.json, binary: { data: item.binary[key] } }];"
+      },
+      "id": "b0446750-e62d-452d-bd19-cf31c88bd0cc",
+      "name": "Pick Resume File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "418d4794-f34f-40f9-b30c-c7bae6096938",
+      "name": "Extract PDF Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a resume parser. Extract the following from the resume text and return ONLY valid JSON, with no markdown and no commentary:\n\n{\n  \"name\": \"\",\n  \"email\": \"\",\n  \"skills\": [],\n  \"job_titles\": [],\n  \"companies\": [],\n  \"education\": [],\n  \"years_experience\": 0\n}\n\nRules: skills must be a flat array of short strings (e.g. \"Python\", \"SQL\"). If a field is missing, use an empty string, empty array, or 0."
+            }
+          ]
+        }
+      },
+      "id": "e12914aa-2d5c-41a5-b990-bf2399ef56b2",
+      "name": "Parse Resume with LLM",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        1280,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $input.first().json;\nconst raw = first.text || first.output || '';\nconst clean = String(raw).replace(/```json|```/g, '').trim();\n\nlet data;\ntry {\n  data = JSON.parse(clean);\n} catch (e) {\n  throw new Error('LLM did not return valid JSON: ' + clean.slice(0, 200));\n}\n\nconst skills = Array.isArray(data.skills) ? data.skills : [];\n\nreturn [{\n  json: {\n    candidate: data.name || '',\n    email: data.email || '',\n    years_experience: data.years_experience ?? null,\n    skills,\n    skills_list: skills.map(s => '• ' + s).join('\\n')\n  }\n}];"
+      },
+      "id": "e0558e99-a2d7-4b57-82e5-9da18605a382",
+      "name": "Skills List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        128
+      ],
+      "id": "4ad6f880-cb40-498f-8de2-09d4044f3cfb",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "XDrrdU3CmfsinPRa",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Skills found",
+        "completionMessage": "={{ $json.skills_list }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 2.5,
+      "position": [
+        1744,
+        80
+      ],
+      "id": "c084f791-8150-46d3-8c32-8e111952ddf7",
+      "name": "Form",
+      "webhookId": "3ec8cc23-98f6-4842-8c09-6009c1d91f77"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Upload Resume": {
+      "main": [
+        [
+          {
+            "node": "Pick Resume File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Resume File": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Parse Resume with LLM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Resume with LLM": {
+      "main": [
+        [
+          {
+            "node": "Skills List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skills List": {
+      "main": [
+        [
+          {
+            "node": "Form",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Parse Resume with LLM",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "5ee2f265-26d6-45f2-a6a3-6e4064d00346",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9be8c0cd99bf33fff126f71667aef8f6ecdc156d2d3c25de85bf58f2d0a5ed42"
+  },
+  "nodeGroups": [],
+  "id": "zYwsgHm3icF4QJNs",
+  "tags": []
+}
